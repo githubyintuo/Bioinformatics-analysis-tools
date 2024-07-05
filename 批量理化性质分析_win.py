@@ -1,45 +1,42 @@
-
 #!python
 # coding: utf-8
 # usage: python script infile filename
+import re
+
+from Bio import SeqIO
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from Bio import SeqIO
-import re
 
 file_name = input('请输入文件名:')
 out_file = 'result.txt'
 
-s = Service(r"D:\chromedriver\chromedriver.exe")
 # 更换为自己的chromedriver.exe所在的位置
-expasy = webdriver.Chrome(service=s)
+expasy = webdriver.Chrome()
 expasy.get("https://web.expasy.org/protparam/")
 
 
 class expasy_cal():
     # get physical and chemical parameters for a given protein sequence file based on web
     # https://web.expasy.org/protparam/
-
     def inputseq(seq):
         """input the protein sequence"""
         while True:
-            if expasy.find_element(By.XPATH, '//*[@id="sib_body"]/form/textarea').is_displayed():
-                expasy.find_element(By.XPATH, '//*[@id="sib_body"]/form/p[1]/input[1]').click()  # 获取新网页
-                expasy.find_element(By.XPATH, '//*[@id="sib_body"]/form/textarea').send_keys(seq)
-                expasy.find_element(By.XPATH, '//*[@id="sib_body"]/form/p[1]/input[2]').click()
+            if expasy.find_element(By.XPATH, '/html/body/main/div/form/textarea').is_displayed():
+                expasy.find_element(By.XPATH, '/html/body/main/div/form/input[2]').click()  # 获取新网页
+                expasy.find_element(By.XPATH, '/html/body/main/div/form/textarea').send_keys(seq)
+                expasy.find_element(By.XPATH, '/html/body/main/div/form/input[3]').click()
                 break
             else:
                 print("input box is not displayed")
 
     def compute():
         """get the parameters showed below"""
-        # inbox.send_keys(seq)
         while True:
-            if expasy.find_element(By.XPATH, '//*[@id="sib_body"]/h2').is_displayed():
+            if expasy.find_element(By.XPATH, '/html/body/main').is_displayed():
                 pd = {}
                 pd["instability_index"] = 0
-                parameters = expasy.find_element(By.XPATH, '//*[@id="sib_body"]/pre[2]').text.split("\n\n")  # 分割不同参数
+                parameters = expasy.find_element(By.XPATH, '/html/body/main/div').text.split("\n\n")  # 分割不同参数
                 aaa = '\n'.join(parameters)
                 # print(aaa)
                 bbb = re.split("[:\n]", aaa)  # 将参数值 与 值分割
@@ -51,20 +48,18 @@ class expasy_cal():
                 ii = bbb.index("Instability index") + 2
                 ai = bbb.index("Aliphatic index") + 1
                 g = bbb.index("Grand average of hydropathicity (GRAVY)") + 1
-                # print(noac,mw,tp,f,tnoa,ii,ai,g)
-                # print(bbb)
                 pd["number_of_amine_acid"] = bbb[noac].strip()
                 pd["molecular_weight"] = bbb[mw].strip()
                 pd["theoretical_pi"] = bbb[tp].strip()
                 pd["Formula"] = bbb[f].strip()
                 pd["Total_number_of_atoms"] = bbb[tnoa].strip()
-                pd["instability_index"] = re.findall("[\d.]+", bbb[ii])[0]
+                pd["instability_index"] = re.findall("\\d+\\.\\d+", bbb[ii])[0]
                 pd["aliphatic_index"] = bbb[ai].strip()
                 pd["gravy"] = bbb[g].strip()
-                return pd
                 break
-        else:
-            print("loading")
+            else:
+                print("loading")
+        return pd
 with open(out_file, "w", encoding='utf-8') as f:
     f.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(
         'seq_id',
@@ -105,3 +100,4 @@ with open(out_file, "w", encoding='utf-8') as f:
         i += 1
         expasy.back()  # 好像back也需要重新加载页面
 expasy.close()
+print('完成')
