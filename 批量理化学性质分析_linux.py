@@ -1,48 +1,52 @@
 #!/usr/bin/env python
 # coding: utf-8
-# usage: python script infile filename
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from Bio import SeqIO
+# usage: pro_phys.py
+import argparse
 import re
-file_name = input('请输入文件名:')
-out_file = 'result.txt'
-chromedriver_path = input('请输入chromedriver存放路径:')
 
-s = 'Service(r"' + chromedriver_path + '")'
+from Bio import SeqIO
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+
+parser = argparse.ArgumentParser(description='This script is used for batch prediction of physicochemical properties of protein sequences.\n'
+                                 'usage: python pro_phys.py -f seq.fasta -o result.txt')
+parser.add_argument('-f', '--seq_file', help='Please input fasta file containing multiple sequences.', required=True)
+parser.add_argument('-o', '--out_file', help='Please input file name of outfile(****.txt,no spaces).', required=True)
+args = parser.parse_args()
+file_name = args.seq_file
+out_file = args.out_file
+
+
 chrome_options = webdriver.ChromeOptions()
 chrome_options.add_argument('headless')
 chrome_options.add_argument('--no-sandbox')
 chrome_options.add_argument('--disable-gpu')
 chrome_options.add_argument('--disable-dev-shm-usage')
-expasy = webdriver.Chrome(chrome_options=chrome_options)
+expasy = webdriver.Chrome(options=chrome_options)
 expasy.get("https://web.expasy.org/protparam/")
 
 
 class expasy_cal():
     # get physical and chemical parameters for a given protein sequence file based on web
     # https://web.expasy.org/protparam/
-
     def inputseq(seq):
         """input the protein sequence"""
         while True:
-            if expasy.find_element(By.XPATH, '//*[@id="sib_body"]/form/textarea').is_displayed():
-                expasy.find_element(By.XPATH, '//*[@id="sib_body"]/form/p[1]/input[1]').click()  # 获取新网页
-                expasy.find_element(By.XPATH, '//*[@id="sib_body"]/form/textarea').send_keys(seq)
-                expasy.find_element(By.XPATH, '//*[@id="sib_body"]/form/p[1]/input[2]').click()
+            if expasy.find_element(By.XPATH, '/html/body/main/div/form/textarea').is_displayed():
+                expasy.find_element(By.XPATH, '/html/body/main/div/form/input[2]').click()  # 获取新网页
+                expasy.find_element(By.XPATH, '/html/body/main/div/form/textarea').send_keys(seq)
+                expasy.find_element(By.XPATH, '/html/body/main/div/form/input[3]').click()
                 break
             else:
                 print("input box is not displayed")
 
     def compute():
         """get the parameters showed below"""
-        # inbox.send_keys(seq)
         while True:
-            if expasy.find_element(By.XPATH, '//*[@id="sib_body"]/h2').is_displayed():
+            if expasy.find_element(By.XPATH, '/html/body/main').is_displayed():
                 pd = {}
                 pd["instability_index"] = 0
-                parameters = expasy.find_element(By.XPATH, '//*[@id="sib_body"]/pre[2]').text.split("\n\n")  # 分割不同参数
+                parameters = expasy.find_element(By.XPATH, '/html/body/main/div').text.split("\n\n")  # 分割不同参数
                 aaa = '\n'.join(parameters)
                 # print(aaa)
                 bbb = re.split("[:\n]", aaa)  # 将参数值 与 值分割
@@ -54,20 +58,19 @@ class expasy_cal():
                 ii = bbb.index("Instability index") + 2
                 ai = bbb.index("Aliphatic index") + 1
                 g = bbb.index("Grand average of hydropathicity (GRAVY)") + 1
-                # print(bbb)
                 pd["number_of_amine_acid"] = bbb[noac].strip()
                 pd["molecular_weight"] = bbb[mw].strip()
                 pd["theoretical_pi"] = bbb[tp].strip()
                 pd["Formula"] = bbb[f].strip()
                 pd["Total_number_of_atoms"] = bbb[tnoa].strip()
-                pd["instability_index"] = re.findall("[\d.]+", bbb[ii])[0]
+                pd["instability_index"] = re.findall("\\d+\\.\\d+", bbb[ii])[0]
                 pd["aliphatic_index"] = bbb[ai].strip()
                 pd["gravy"] = bbb[g].strip()
-                return pd
                 break
-        else:
-            print("loading")
-with open(out_file, "w", encoding='UTF-8') as f:
+            else:
+                print("loading")
+        return pd
+with open(out_file, "w", encoding='utf-8') as f:
     f.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(
         'seq_id',
         'number_of_amine_acid',
@@ -107,3 +110,4 @@ with open(out_file, "w", encoding='UTF-8') as f:
         i += 1
         expasy.back()  # 好像back也需要重新加载页面
 expasy.close()
+print('完成')
