@@ -1,28 +1,23 @@
-#!/usr/bin/env python
+#!python
 # coding: utf-8
-# usage: pro_phys.py
-import argparse
+# usage: python script infile filename
 import re
 
 from Bio import SeqIO
 from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 
-parser = argparse.ArgumentParser(description='This script is used for batch prediction of physicochemical properties of protein sequences.\n'
-                                 'usage: python pro_phys.py -f seq.fasta -o result.txt')
-parser.add_argument('-f', '--seq_file', help='Please input fasta file containing multiple sequences.', required=True)
-parser.add_argument('-o', '--out_file', help='Please input file name of outfile(****.txt,no spaces).', required=True)
-args = parser.parse_args()
-file_name = args.seq_file
-out_file = args.out_file
+file_name = input('请输入文件名:')
+out_file = 'result.txt'
 
-
-chrome_options = webdriver.ChromeOptions()
-chrome_options.add_argument('headless')
-chrome_options.add_argument('--no-sandbox')
-chrome_options.add_argument('--disable-gpu')
-chrome_options.add_argument('--disable-dev-shm-usage')
-expasy = webdriver.Chrome(options=chrome_options)
+# 更换为自己的chromedriver.exe所在的位置
+chrome_options = Options()
+chrome_options.add_argument('--headless')
+chrome_options.add_argument('-no-sandbox')
+service = Service(r"D:\chromedriver\chromedriver.exe")
+expasy = webdriver.Chrome(service=service, options=chrome_options)
 expasy.get("https://web.expasy.org/protparam/")
 
 
@@ -46,11 +41,11 @@ class expasy_cal():
             if expasy.find_element(By.XPATH, '/html/body/main').is_displayed():
                 pd = {}
                 pd["instability_index"] = 0
-                parameters = expasy.find_element(By.XPATH, '/html/body/main/div').text.split("\n\n")  # 分割不同参数
+                parameters = expasy.find_element(By.XPATH, '/html/body/main').text.split("\n\n")  # 分割不同参数
                 aaa = '\n'.join(parameters)
                 # print(aaa)
                 bbb = re.split("[:\n]", aaa)  # 将参数值 与 值分割
-                noac = 	bbb.index("Number of amino acids") + 1
+                noac = bbb.index("Number of amino acids") + 1
                 mw = bbb.index("Molecular weight") + 1
                 tp = bbb.index("Theoretical pI") + 1
                 f = bbb.index("Formula") + 1
