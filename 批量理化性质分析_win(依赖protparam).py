@@ -5,6 +5,7 @@ import re
 
 from Bio import SeqIO
 from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 
@@ -12,7 +13,11 @@ file_name = input('请输入文件名:')
 out_file = 'result.txt'
 
 # 更换为自己的chromedriver.exe所在的位置
-expasy = webdriver.Chrome()
+chrome_options = Options()
+chrome_options.add_argument('--headless')
+chrome_options.add_argument('-no-sandbox')
+service = Service(r"D:\chromedriver\chromedriver.exe")
+expasy = webdriver.Chrome(service=service, options=chrome_options)
 expasy.get("https://web.expasy.org/protparam/")
 
 
@@ -36,11 +41,11 @@ class expasy_cal():
             if expasy.find_element(By.XPATH, '/html/body/main').is_displayed():
                 pd = {}
                 pd["instability_index"] = 0
-                parameters = expasy.find_element(By.XPATH, '/html/body/main/div').text.split("\n\n")  # 分割不同参数
+                parameters = expasy.find_element(By.XPATH, '/html/body/main').text.split("\n\n")  # 分割不同参数
                 aaa = '\n'.join(parameters)
                 # print(aaa)
                 bbb = re.split("[:\n]", aaa)  # 将参数值 与 值分割
-                noac = 	bbb.index("Number of amino acids") + 1
+                noac = bbb.index("Number of amino acids") + 1
                 mw = bbb.index("Molecular weight") + 1
                 tp = bbb.index("Theoretical pI") + 1
                 f = bbb.index("Formula") + 1
